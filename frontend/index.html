@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SMARTTRAFFIC - AI</title>
+    <link rel="stylesheet" href="/static/styles.css?v=2" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">ST</div>
+          <div>
+            <h1>SMARTTRAFFIC - AI</h1>
+            <p>Bang dieu khien giam sat giao thong</p>
+          </div>
+        </div>
+
+        <form id="controlForm" class="control-form">
+          <label class="field">
+            <span>Video</span>
+            <input id="videoInput" name="video" type="file" accept=".mp4,.avi,.mov" required />
+          </label>
+
+          <label class="field">
+            <span>Preset demo</span>
+            <select id="demoPreset">
+              <option value="balanced">Can bang</option>
+              <option value="fast">Nhanh</option>
+              <option value="accurate">Chinh xac</option>
+            </select>
+          </label>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>YOLO model</span>
+              <select id="modelPath" name="model_path">
+                <option value="yolov8n.pt">yolov8n.pt</option>
+                <option value="yolov8s.pt">yolov8s.pt</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Den giao thong</span>
+              <select id="trafficLight" name="traffic_light">
+                <option value="RED">RED</option>
+                <option value="GREEN">GREEN</option>
+                <option value="YELLOW">YELLOW</option>
+                <option value="NONE">NONE (Khong den)</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Phan lan duong</span>
+            <select id="laneScenario" name="lane_scenario">
+              <option value="none">Tat phan lan (Cao toc / Duong chung)</option>
+              <option value="city_standard">Do thi (Trai: O to | Phai: Xe may)</option>
+              <option value="highway">Cao toc (Tat ca lan cho O to)</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Loc doi tuong nhan dien</span>
+            <select id="targetFilter" name="target_classes">
+              <option value="all">Tat ca (O to, Xe may, Buyt, Tai, Nguoi)</option>
+              <option value="car_motorcycle">Chi O to &amp; Xe may</option>
+              <option value="vehicles_only">Tat ca phuong tien (Bo nguoi)</option>
+              <option value="car">Chi O to</option>
+              <option value="motorcycle">Chi Xe may</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Model tuy chinh</span>
+            <input id="customModel" type="text" placeholder="models/my_model.pt only" />
+          </label>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>Suc chua toi da</span>
+              <input id="maxCapacity" name="max_capacity" type="number" min="1" max="300" value="30" />
+            </label>
+
+            <label class="field">
+              <span>Bo qua frame</span>
+              <input id="frameSkip" name="frame_skip" type="number" min="1" max="30" value="1" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Nguong tin cay</span>
+            <input id="confidenceThreshold" name="confidence_threshold" type="number" min="0.05" max="0.9" step="0.05" value="0.35" />
+          </label>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>Binh thuong duoi %</span>
+              <input id="normalThreshold" name="normal_threshold" type="number" min="0" max="90" value="40" />
+            </label>
+
+            <label class="field">
+              <span>Un tac tu %</span>
+              <input id="crowdedThreshold" name="crowded_threshold" type="number" min="5" max="100" value="70" />
+            </label>
+          </div>
+
+          <div class="toggles">
+            <label><input id="showBoxes" name="show_boxes" type="checkbox" checked /> Boxes</label>
+            <label><input id="showRoi" name="show_roi" type="checkbox" checked /> ROI</label>
+            <label><input id="showLine" name="show_line" type="checkbox" checked /> Line</label>
+            <label><input id="showLanes" name="show_lanes" type="checkbox" /> Lanes</label>
+            <label><input id="saveEvidence" name="save_evidence" type="checkbox" checked /> Bang chung</label>
+          </div>
+
+          <div class="actions">
+            <button id="startBtn" type="submit">Bat dau</button>
+            <button id="stopBtn" type="button" class="secondary" disabled>Dung</button>
+          </div>
+        </form>
+      </aside>
+
+      <main class="main-panel">
+        <section class="video-section">
+          <div class="section-header">
+            <div>
+              <h2>Video xu ly thoi gian thuc</h2>
+              <p id="statusText">Chua co video dang chay.</p>
+            </div>
+            <span id="lightBadge" class="badge badge-red">RED</span>
+          </div>
+
+          <div class="video-frame">
+            <img id="videoFrame" alt="Processed traffic frame" />
+            <div id="emptyState" class="empty-state">Tai video len va bam Bat dau.</div>
+          </div>
+        </section>
+
+        <section class="stats-grid">
+          <article class="metric"><span>Tong xe hien tai</span><strong id="totalVehicles">0</strong></article>
+          <article class="metric"><span>O to</span><strong id="carCount">0</strong></article>
+          <article class="metric"><span>Xe may</span><strong id="motorcycleCount">0</strong></article>
+          <article class="metric"><span>Xe buyt</span><strong id="busCount">0</strong></article>
+          <article class="metric"><span>Xe tai</span><strong id="truckCount">0</strong></article>
+          <article class="metric"><span>Mat do</span><strong id="densityValue">0%</strong></article>
+        </section>
+
+        <section class="stats-grid summary-grid">
+          <article class="metric"><span>Frame da xu ly</span><strong id="processedFrames">0</strong></article>
+          <article class="metric"><span>Vi pham</span><strong id="totalViolations">0</strong></article>
+          <article class="metric"><span>Mat do TB</span><strong id="averageDensity">0%</strong></article>
+          <article class="metric"><span>Mat do cao nhat</span><strong id="maxDensity">0%</strong></article>
+          <article class="metric"><span>FPS TB</span><strong id="averageFps">0.0</strong></article>
+          <article class="metric"><span>Xe TB/frame</span><strong id="averageVehicles">0.0</strong></article>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel">
+            <div class="section-header compact">
+              <h2>Mat do theo thoi gian</h2>
+              <span id="fpsValue">FPS 0.0</span>
+            </div>
+            <canvas id="densityChart" width="720" height="220"></canvas>
+          </article>
+
+          <article class="panel">
+            <div class="section-header compact">
+              <h2>Dieu phoi giao thong</h2>
+            </div>
+            <dl class="traffic-summary">
+              <div>
+                <dt>Xe trong ROI</dt>
+                <dd id="roiCount">0</dd>
+              </div>
+              <div>
+                <dt>Mat do PCU</dt>
+                <dd id="pcuDensity">0.0 PCU (0%)</dd>
+              </div>
+              <div>
+                <dt>Ty le Xe may</dt>
+                <dd id="motorcycleRatio">0%</dd>
+              </div>
+              <div>
+                <dt>Trang thai</dt>
+                <dd id="trafficStatus">Binh thuong</dd>
+              </div>
+              <div>
+                <dt>Khuyen nghi</dt>
+                <dd id="recommendation">Luu luong on dinh.</dd>
+              </div>
+            </dl>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="section-header compact">
+            <h2>Nhat ky vi pham</h2>
+            <button id="refreshLogsBtn" type="button" class="small secondary">Tai lai</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Thoi gian</th>
+                  <th>Track ID</th>
+                  <th>Loai xe</th>
+                  <th>Vi pham</th>
+                  <th>Do tin cay</th>
+                  <th>Bang chung</th>
+                </tr>
+              </thead>
+              <tbody id="violationRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js?v=2"></script>
+  </body>
+</html>

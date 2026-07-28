@@ -1,0 +1,39 @@
+model_path: yolov8n.pt
+confidence_threshold: 0.35
+max_capacity: 30
+density_threshold:
+  normal: 40
+  crowded: 70
+roi_ratio:
+  x1: 0.0
+  y1: 0.0
+  x2: 1.0
+  y2: 1.0
+line_position_ratio: 0.62
+evidence_dir: evidence
+violation_db_path: logs/violations.sqlite3
+line_crossing_direction: down
+lanes:
+  - name: "Lane Oto"
+    allowed_classes: ["car", "bus", "truck"]
+    roi_ratio:
+      x1: 0.0
+      y1: 0.0
+      x2: 0.5
+      y2: 1.0
+  - name: "Lane Xe May"
+    allowed_classes: ["motorcycle"]
+    roi_ratio:
+      x1: 0.5
+      y1: 0.0
+pcu_weights:
+  motorcycle: 0.3
+  car: 1.0
+  bus: 2.5
+  truck: 2.0
+datasets:
+  uadetrac_path: data/processed/ua_detrac_yolo
+  vntraffic_path: data/processed/vn_traffic_yolo
+  unified_yaml: data/unified_dataset.yaml
+
+
