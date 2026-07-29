@@ -235,6 +235,10 @@ button.small {
   background: #64748b;
 }
 
+.badge-auto {
+  background: #8b5cf6;
+}
+
 .video-frame {
   --video-aspect-ratio: 16 / 9;
   position: relative;

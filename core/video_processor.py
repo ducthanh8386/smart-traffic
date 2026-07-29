@@ -8,9 +8,10 @@ import cv2
 
 from core.density import DensityEstimator
 from core.helmet_detector import HelmetDetector
-from core.roi import create_default_line, create_default_roi, draw_line, draw_roi
+from core.roi import create_default_line, create_default_roi, create_polygon_roi, draw_line, draw_roi
 from core.storage import get_violation_storage
 from core.tracker import ObjectTracker
+from core.traffic_light_detector import TrafficLightDetector
 from core.utils import calculate_fps, draw_text_with_background
 from core.violation import ViolationDetector
 
@@ -59,16 +60,29 @@ class VideoProcessor:
             crossing_direction=config.get("line_crossing_direction", "down"),
         )
         self.helmet_detector = HelmetDetector(confidence_threshold=confidence)
+        self.traffic_light_detector = TrafficLightDetector()
 
     def process_frame(self, frame, session_id: str = "", frame_index: int = 0) -> tuple[Any, dict[str, Any]]:
         """Process and annotate a single BGR frame."""
         frame_height, frame_width = frame.shape[:2]
-        roi = create_default_roi(frame_width, frame_height, self.config.get("roi_ratio"))
+        custom_roi = self.config.get("custom_roi_points")
+        if custom_roi:
+            roi = create_polygon_roi(frame_width, frame_height, custom_roi)
+        else:
+            roi = create_default_roi(frame_width, frame_height, self.config.get("roi_ratio"))
+
+        custom_line = self.config.get("custom_line_points")
         line = create_default_line(
             frame_width,
             frame_height,
             float(self.config.get("line_position_ratio", 0.62)),
+            custom_line=custom_line,
         )
+
+        effective_light = self.traffic_light
+        if self.traffic_light == "AUTO":
+            detected_light = self.traffic_light_detector.detect_state(frame, roi)
+            effective_light = detected_light if detected_light != "UNKNOWN" else "RED"
 
         tracked_objects = self.tracker.track(frame, classes=self.target_classes)
         vehicle_count_roi, vehicles_in_roi = self.density_estimator.count_vehicles_in_roi(tracked_objects, roi)
@@ -79,12 +93,12 @@ class VideoProcessor:
         recommendation = self.density_estimator.get_recommendation(traffic_status)
 
         red_light_violations = []
-        if self.traffic_light != "NONE":
+        if effective_light != "NONE":
             red_light_violations = self.violation_detector.check_red_light_violation(
                 frame,
                 vehicles_in_roi,
                 line,
-                self.traffic_light,
+                effective_light,
                 session_id=session_id,
                 frame_index=frame_index,
             )
@@ -122,7 +136,7 @@ class VideoProcessor:
             "motorcycle_ratio_percent": pcu_metrics["motorcycle_ratio_percent"],
             "traffic_status": traffic_status,
             "recommendation": recommendation,
-            "traffic_light": self.traffic_light,
+            "traffic_light": effective_light,
             "violations": violations,
         }
 

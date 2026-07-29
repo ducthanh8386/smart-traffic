@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import asyncio
+import json
 from contextlib import asynccontextmanager
 import sys
 import time
@@ -38,7 +39,7 @@ MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 MAX_ACTIVE_SESSIONS = 3
 SESSION_TIMEOUT_SECONDS = 20 * 60
 CLEANUP_INTERVAL_SECONDS = 60
-VALID_LIGHTS = {"RED", "GREEN", "YELLOW", "NONE"}
+VALID_LIGHTS = {"RED", "GREEN", "YELLOW", "NONE", "AUTO"}
 VALID_LANE_SCENARIOS = {"none", "city_standard", "highway"}
 VALID_UPLOAD_EXTENSIONS = {".mp4", ".avi", ".mov"}
 VALID_CONTENT_TYPES = {
@@ -221,6 +222,8 @@ async def create_session(
     show_lanes: bool = Form(False),
     lane_scenario: str = Form("none"),
     target_classes: str = Form("all"),
+    custom_roi_json: str = Form(""),
+    custom_line_json: str = Form(""),
     save_evidence: bool = Form(True),
     frame_skip: int = Form(1),
 ) -> dict[str, str]:
@@ -242,6 +245,18 @@ async def create_session(
     try:
         await save_upload(video, video_path)
         config = build_runtime_config(normal_threshold, crowded_threshold, confidence_threshold)
+
+        if custom_roi_json:
+            try:
+                config["custom_roi_points"] = json.loads(custom_roi_json)
+            except Exception:
+                pass
+
+        if custom_line_json:
+            try:
+                config["custom_line_points"] = json.loads(custom_line_json)
+            except Exception:
+                pass
 
         if lane_scenario == "highway":
             config["lanes"] = [

@@ -44,6 +44,7 @@
             <label class="field">
               <span>Den giao thong</span>
               <select id="trafficLight" name="traffic_light">
+                <option value="AUTO">AUTO (AI Nhan dien den)</option>
                 <option value="RED">RED</option>
                 <option value="GREEN">GREEN</option>
                 <option value="YELLOW">YELLOW</option>
@@ -74,7 +75,7 @@
 
           <label class="field">
             <span>Model tuy chinh</span>
-            <input id="customModel" type="text" placeholder="models/my_model.pt only" />
+            <input id="customModel" type="text" placeholder="De trong neu dung yolov8n.pt/yolov8s.pt" />
           </label>
 
           <div class="grid-2">
@@ -217,6 +218,6 @@
       </main>
     </div>
 
-    <script src="/static/app.js?v=2"></script>
+    <script type="module" src="/static/app.js?v=3"></script>
   </body>
 </html>
