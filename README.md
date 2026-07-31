@@ -1,148 +1,238 @@
-# SMARTTRAFFIC - AI
+# SMARTTRAFFIC - AI: Hệ Thống Giám Sát Giao Thông Thông Minh
 
-SMARTTRAFFIC - AI la demo giam sat giao thong bang Computer Vision. Ung dung nhan dien phuong tien trong video, theo doi tung xe qua nhieu frame, tinh mat do trong vung ROI va ghi nhan vi pham vuot den do bang anh bang chung.
+**SMARTTRAFFIC - AI** là ứng dụng giám sát và phân tích giao thông sử dụng công nghệ Thị giác máy tính (Computer Vision) và Trí tuệ nhân tạo (AI). Hệ thống cung cấp khả năng nhận diện phương tiện trong video, theo dõi liên tục qua nhiều frame, tự động tính toán mật độ giao thông trong vùng quan tâm (ROI), đồng thời phát hiện vi phạm vượt đèn đỏ và lưu trữ ảnh bằng chứng trực quan.
 
-## Muc tieu do an
+---
 
-- Xu ly video giao thong bang YOLOv8 va ByteTrack.
-- Dem so luong `car`, `motorcycle`, `bus`, `truck` theo tung frame.
-- Tinh mat do giao thong trong ROI va dua ra trang thai `Binh thuong`, `Dong`, `Un tac`.
-- Phat hien xe cat vach khi den dang `RED`, luu log SQLite va anh bang chung.
-- Cung cap dashboard web de demo, thuyet trinh va kiem tra ket qua truc quan.
+## 📌 Mục Tiêu Dự Án
 
-## Kien truc
+* **Nhận diện & Đếm phương tiện:** Sử dụng mô hình YOLOv8 để phát hiện các lớp phương tiện giao thông (như `car`, `motorcycle`, `bus`, `truck`, `container_truck`, `van`, `bicycle`, `fire_engine`).
+* **Theo dõi đa đối tượng (Multi-Object Tracking):** Tích hợp thuật toán **ByteTrack** gán `track_id` duy nhất cho từng phương tiện, giúp đếm chính xác và tránh ghi trùng lặp vi phạm.
+* **Đánh giá Mật độ Giao thông (ROI Density):** Tính toán mật độ xe trong vùng ROI theo thời gian thực và phân loại trạng thái: `Bình thường`, `Đông`, hoặc `Ùn tắc`.
+* **Phát hiện Vi phạm Đèn đỏ:** Khi tín hiệu đèn là `RED`, tự động phát hiện phương tiện cắt qua vạch ảo theo hướng quy định, lưu thông tin vi phạm vào CSDL SQLite và xuất ảnh bằng chứng có khung khoanh vùng (bounding box).
+* **Dashboard Trực Quan:** Giao diện Web hiện đại, hỗ trợ tải video, tùy chỉnh tham số, stream khung hình kèm bounding box và xem báo cáo tổng kết phiên xử lý.
+
+---
+
+## 🏗️ Kiến Trúc Hệ Thống
 
 ```text
-Video upload
-  -> FastAPI session
-  -> OpenCV read frame
-  -> YOLOv8 detect + ByteTrack track
-  -> ROI density + red-light line crossing
-  -> Annotated frame + session summary + SQLite violation log
-  -> HTML/CSS/JS dashboard
+Video Upload 
+  │
+  ▼
+FastAPI Session Controller
+  │
+  ├─► OpenCV Frame Capture
+  │     │
+  │     ▼
+  ├─► YOLOv8 Detection + ByteTrack Tracking
+  │     │
+  │     ▼
+  ├─► ROI Density Calculation & Red-Light Crossing Logic
+  │     │
+  │     ▼
+  ├─► Frame Annotation + Evidence Snapshot Generation
+  │     │
+  │     ▼
+  └─► SQLite Violation Database (`violations.sqlite3`)
+  │
+  ▼
+HTML5 / CSS3 / Vanilla JS Web Dashboard (HTTP / Stream)
 ```
 
-Stack:
+### 🛠️ Công Nghệ Sử Dụng
 
-- Frontend: HTML, CSS, JavaScript thuan
-- Backend: FastAPI
-- Computer Vision: OpenCV, Ultralytics YOLOv8, ByteTrack
-- Storage: SQLite va anh bang chung local
-- Test: pytest
+* **Frontend:** HTML5, CSS3, Vanilla JavaScript (Fetch API, SSE / Polling).
+* **Backend:** Python 3.10+, FastAPI, Uvicorn, Pydantic.
+* **Computer Vision & AI:** OpenCV, Ultralytics YOLOv8 (PyTorch), ByteTrack.
+* **Database & Storage:** SQLite3, Local File System (Lưu ảnh bằng chứng).
+* **Testing:** Pytest (Unit test & Integration test).
 
-## Cach chay
+---
 
-Dung Python 3.11 hoac 3.12.
+## 📂 Cấu Trúc Thư Mục Dự Án
+
+```text
+project_final/
+├── backend/                  # Mã nguồn Backend FastAPI
+│   ├── main.py               # API Endpoints & Cấu hình Routes
+│   ├── models.py             # Schema Pydantic cho Request/Response
+│   ├── storage.py            # Quản lý CSDL SQLite & Lưu trữ Ảnh bằng chứng
+│   └── tracker.py            # Tích hợp ByteTrack & YOLOv8 Processing
+├── configs/
+│   └── config.yaml           # Cấu hình mặc định (ROI, Vạch vi phạm, Thresh)
+├── core/                     # Các module xử lý lõi (Core Logic)
+│   ├── density.py            # Tính toán mật độ giao thông vùng ROI
+│   ├── detector.py           # Nhận diện đối tượng với YOLOv8
+│   ├── violation.py          # Logic kiểm tra xe cắt vạch khi đèn đỏ
+│   └── runtime.py            # Cấu hình môi trường thực thi
+├── data/                     # Dữ liệu & Tập huấn luyện (Dataset)
+│   ├── sample_videos/        # Video mẫu test ứng dụng
+│   └── vehicle_dataset/      # Dataset YOLO (data.yaml, train, valid, test)
+├── evidence/                 # Thư mục chứa ảnh chụp bằng chứng vi phạm
+├── models/                   # Chứa các file trọng số (.pt) của YOLOv8
+│   └── vehicle_best.pt       # Mô hình đã được train custom
+├── tools/                    # Các công cụ hỗ trợ
+│   └── train_vehicle_model.py# Script huấn luyện mô hình tùy chỉnh (GPU/CPU)
+├── tests/                    # Thư mục kiểm thử Pytest
+├── run.ps1                   # Script khởi động dự án trên Windows PowerShell
+├── run.bat                   # Script khởi động dự án trên Command Prompt
+└── requirements.txt          # Danh sách thư viện phụ thuộc
+```
+
+---
+
+## 💻 Hướng Dẫn Cài Đặt & Chạy Ứng Dụng
+
+### 1. Yêu Cầu Môi Trường
+* **Hệ điều hành:** Windows 10/11 (hoặc Linux/macOS).
+* **Python:** Phiên bản 3.10, 3.11 hoặc 3.12.
+
+### 2. Cài Đặt Thư Viện
+
+Mở PowerShell tại thư mục gốc của dự án:
 
 ```powershell
-cd C:\Users\thanh\VisualStudioCode\06-project\computer-vision\project_final
+# Tạo môi trường ảo (nếu chưa có)
 python -m venv .venv
+
+# Kích hoạt môi trường ảo
 .\.venv\Scripts\activate
+
+# Cài đặt các thư viện phụ thuộc
 pip install -r requirements.txt
-uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+
+# Nâng cấp typing-extensions để đảm bảo tương thích với FastAPI & Pydantic
+.\.venv\Scripts\python.exe -m pip install -U typing-extensions
 ```
 
-Mo `http://127.0.0.1:8000`.
+*(Tùy chọn) Cài đặt PyTorch hỗ trợ GPU NVIDIA CUDA (ví dụ cho RTX 3050, RTX 4060...):*
+```powershell
+.\.venv\Scripts\python.exe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 --force-reinstall
+```
 
-Neu Windows Application Control chan `.venv\Scripts\python.exe`, khong activate venv. Hay chay:
+### 3. Khởi Động Web Dashboard
+
+Khởi động hệ thống nhanh bằng lệnh:
 
 ```powershell
-cd C:\Users\thanh\VisualStudioCode\06-project\computer-vision\project_final
 .\run.ps1
 ```
+*(Hoặc chạy lệnh uvicorn trực tiếp):*
+```powershell
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
 
-Hoac double click/chay `run.bat`. Hai script nay doc Python goc tu `.venv\pyvenv.cfg` va tu dong them `.venv\Lib\site-packages` vao `PYTHONPATH`.
+Sau khi khởi động thành công, mở trình duyệt web và truy cập:
+👉 **`http://127.0.0.1:8000`**
 
-Neu may yeu, chon preset `Nhanh`. Neu can demo ro hon va FPS van on, chon preset `Chinh xac`.
+---
 
-## Cac tinh nang chinh
+## 🎯 Huấn Luyện Mô Hình Tùy Chỉnh (Custom Training)
 
-- **Nhan dien phuong tien**: mac dinh dung `yolov8n.pt` hoac `yolov8s.pt`, nhan dien cac class COCO phu hop voi giao thong.
-- **Tracking**: ByteTrack gan `track_id` on dinh de theo doi cung mot xe qua nhieu frame.
-- **Mat do giao thong**: dem xe nam trong ROI, tinh theo cong thuc `current_vehicle_count / max_capacity * 100`.
-- **Vi pham den do**: khi den la `RED`, xe cat qua line theo huong cau hinh se duoc ghi log mot lan theo `track_id`.
-- **Bang chung**: anh bang chung hien ca frame, line do, bounding box, class, track id va do tin cay.
-- **Tong ket phien**: dashboard hien frame da xu ly, tong vi pham, mat do trung binh/cao nhat, FPS trung binh va so xe trung binh moi frame.
+Dự án đi kèm script `tools/train_vehicle_model.py` hỗ trợ huấn luyện lại YOLOv8 với tập dữ liệu riêng (như tập dữ liệu trong `data/vehicle_dataset/data.yaml`).
 
-## API
+### 1. Cấu hình Tập Dữ Liệu (`data/vehicle_dataset/data.yaml`)
+Cấu hình đường dẫn và các lớp phương tiện:
+```yaml
+path: data/vehicle_dataset
+train: train/images
+val: valid/images
+test: test/images
 
-- `GET /`: dashboard
-- `GET /api/health`: kiem tra server
-- `GET /api/models`: liet ke model co the chon
-- `POST /api/sessions`: tao phien xu ly video
-- `POST /api/sessions/{session_id}/next-frame`: xu ly frame tiep theo
-- `GET /api/sessions/{session_id}/summary`: tong ket phien dang chay
-- `DELETE /api/sessions/{session_id}`: dung va don phien
-- `GET /api/violations`: doc log vi pham gan day
-- `GET /api/evidence/{relative_path}`: xem anh bang chung
+nc: 8
+names: ['bicycle', 'bus', 'car', 'container_truck', 'fire_engine', 'motorcycle', 'truck', 'van']
+```
 
-## Cau hinh ROI va line
+### 2. Lệnh Huấn Luyện Bằng GPU NVIDIA (Khuyên dùng)
+```powershell
+python tools/train_vehicle_model.py --data data/vehicle_dataset/data.yaml --base-model yolov8s.pt --device 0 --epochs 60 --imgsz 640 --batch 16
+```
 
-File `configs/config.yaml` dieu khien cac tham so demo:
+### 3. Lệnh Huấn Luyện Bằng CPU
+```powershell
+python tools/train_vehicle_model.py --data data/vehicle_dataset/data.yaml --base-model yolov8s.pt --device cpu --epochs 30 --imgsz 640 --batch 8
+```
+
+> **Sau khi huấn luyện hoàn tất:** Mô hình có độ chính xác cao nhất (`best.pt`) sẽ tự động được sao chép vào `models/vehicle_best.pt`. Bạn chỉ cần chọn `models/vehicle_best.pt` trên giao diện Dashboard để sử dụng.
+
+---
+
+## ⚙️ Cấu Hình ROI & Vi Phạm (`configs/config.yaml`)
+
+Bạn có thể chỉnh sửa file `configs/config.yaml` để điều chỉnh thông số hoạt động:
 
 ```yaml
 model_path: yolov8n.pt
 confidence_threshold: 0.35
+
+# Tối đa số phương tiện dự kiến trong vùng ROI để tính % mật độ
 max_capacity: 30
+
+# Ngưỡng mật độ (%): 0-40 (Bình thường), 41-70 (Đông), >70 (Ùn tắc)
 density_threshold:
   normal: 40
   crowded: 70
+
+# Vùng quan tâm ROI (tỉ lệ 0.0 -> 1.0 theo x1, y1, x2, y2)
 roi_ratio:
   x1: 0.0
   y1: 0.0
   x2: 1.0
   y2: 1.0
+
+# Vạch ảo phát hiện vượt đèn đỏ (tỉ lệ chiều cao khung hình 0.0 -> 1.0)
 line_position_ratio: 0.62
+
+# Hướng di chuyển xe cắt vạch tính vi phạm: down, up, hoặc both
 line_crossing_direction: down
 ```
 
-- `roi_ratio`: vung tinh mat do, tinh theo ti le khung hinh.
-- `line_position_ratio`: vi tri vach phat hien vuot den do.
-- `line_crossing_direction`: `down`, `up`, hoac `both`.
+---
 
-## Workflow dataset va train custom model
+## 📡 Danh Sách API Endpoints
 
-Ban demo dau tien khong bat buoc co dataset rieng. Nen lam theo thu tu:
+| HTTP Method | API Endpoint | Mô tả |
+| :--- | :--- | :--- |
+| `GET` | `/` | Trả về giao diện Dashboard Web |
+| `GET` | `/api/health` | Kiểm tra trạng thái hoạt động của server |
+| `GET` | `/api/models` | Trả về danh sách các model có sẵn trong thư mục `models/` |
+| `POST` | `/api/sessions` | Khởi tạo phiên xử lý video mới (upload video & nhận config) |
+| `POST` | `/api/sessions/{session_id}/next-frame` | Xử lý frame tiếp theo của video |
+| `GET` | `/api/sessions/{session_id}/summary` | Lấy tổng kết chỉ số của phiên làm việc hiện tại |
+| `DELETE`| `/api/sessions/{session_id}` | Dừng và dọn dẹp phiên xử lý |
+| `GET` | `/api/violations` | Đọc danh sách log vi phạm từ CSDL SQLite |
+| `GET` | `/api/evidence/{relative_path}` | Tải/Xem ảnh bằng chứng vi phạm |
 
-1. Chay baseline voi `yolov8n.pt` va `yolov8s.pt`.
-2. Trich frame tu video giao thong demo.
-3. Gan nhan YOLO bang Roboflow, CVAT hoac LabelImg.
-4. Chia du lieu theo `train/valid`, nen tach them nhom ngay/dem neu co.
-5. Dung class toi thieu: `car`, `motorcycle`, `bus`, `truck`.
-6. Tao `dataset.yaml`.
-7. Train:
+---
 
-```powershell
-python tools\train_vehicle_model.py --data data\vehicle_dataset\dataset.yaml --base-model yolov8s.pt --epochs 80 --imgsz 960
-```
+## 🧪 Kiểm Thử (Testing)
 
-Sau khi train, script copy model tot nhat vao `models/vehicle_best.pt`. Refresh dashboard va chon model trong dropdown.
-
-## Co so ly thuyet
-
-- **YOLO object detection**: phat hien vi tri vat the bang bounding box, class va confidence trong mot lan forward.
-- **ByteTrack object tracking**: lien ket detection qua cac frame de tao `track_id`, giup dem xe va tranh log vi pham trung lap.
-- **ROI**: chi tinh mat do trong vung quan tam thay vi toan frame.
-- **Line crossing**: so sanh tam bbox hien tai va frame truoc voi vach ao de xac dinh xe da cat line.
-- **Precision/Recall/F1/mAP**: cac metric nen dung khi co dataset gan nhan de danh gia model custom.
-
-## Lien he voi 2 tai lieu tham khao
-
-- Bai CNN phan loai o to/xe may phu hop de giai thich nen tang CNN, convolution, pooling, optimizer va train/validation. Tuy nhien, CNN phan loai khong du cho video giao thong vi khong tra ve bbox va khong tracking.
-- Bai YOLOv4 + DeepSORT gan voi du an hon: cung huong object detection + object tracking. Du an nay dung YOLOv8 + ByteTrack, moi hon va phu hop demo hon trong stack Ultralytics hien tai.
-
-## Han che
-
-- Model pretrained COCO chua toi uu cho moi goc camera va dieu kien giao thong Viet Nam.
-- Chua co danh gia mAP/F1 thuc te neu chua co dataset gan nhan.
-- Vi pham den do dang dua tren line ao va trang thai den do do nguoi dung chon, chua doc truc tiep tin hieu den.
-- Chua dua phat hien mu bao hiem vao demo chinh vi chua co model/dataset rieng.
-
-## Test
+Hệ thống tích hợp bộ kiểm thử tự động với Pytest. Để chạy kiểm thử:
 
 ```powershell
 pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-Test hien co bao phu ROI, density, model registry, SQLite storage va logic line crossing/vi pham den do.
+Bộ test đảm bảo kiểm tra toàn bộ các thành phần:
+* Logic tính toán mật độ giao thông vùng ROI.
+* Logic phát hiện xe cắt qua vạch vi phạm đèn đỏ.
+* Đọc/ghi CSDL vi phạm SQLite.
+* Kiểm tra tính hợp lệ của Model Registry và API Endpoints.
+
+---
+
+## 📖 Cơ Sở Lý Thuyết & So Sánh Phương Pháp
+
+* **YOLOv8 (You Only Look Once v8):** Thuật toán phát hiện đối tượng Single-stage State-of-the-Art, cho tốc độ xử lý nhanh, độ chính xác cao phù hợp với ứng dụng thời gian thực (Real-time).
+* **ByteTrack:** Thuật toán tracking vượt trội hơn DeepSORT nhờ việc tận dụng cả các Bounding Box có độ tin cậy thấp (low-score detection boxes), giúp hạn chế tối đa tình trạng mất dấu đối tượng khi xe bị che khuất tạm thời.
+* **So với CNN phân loại thuần túy:** Phân loại CNN truyền thống chỉ phân loại toàn bộ khung hình, không thể xác định vị trí (Bounding Box), không đếm được số lượng từng loại xe và không có khả năng theo dõi vết di chuyển (Tracking).
+
+---
+
+## 📝 Giấy Phép & Tác Giả
+
+* **Dự án:** SMARTTRAFFIC - AI (Báo cáo Đồ án Thị giác Máy tính).
+* **Phát triển bởi:** Đội ngũ phát triển SMARTTRAFFIC.
+* **Giấy phép:** Được bảo hộ và phát triển cho mục đích học thuật & nghiên cứu.

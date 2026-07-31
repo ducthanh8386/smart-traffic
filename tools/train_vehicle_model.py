@@ -21,6 +21,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--imgsz", type=int, default=960)
     parser.add_argument("--batch", type=int, default=8)
+    parser.add_argument("--device", default="0", help="CUDA device, e.g. 0 or 0,1 or cpu.")
     parser.add_argument("--name", default="smarttraffic_vehicle")
     parser.add_argument("--output-model", default="models/vehicle_best.pt", help="Where to copy the trained best.pt.")
     return parser.parse_args()
@@ -39,6 +40,7 @@ def main() -> None:
         epochs=args.epochs,
         imgsz=args.imgsz,
         batch=args.batch,
+        device=args.device,
         project=str(ROOT_DIR / "runs"),
         name=args.name,
     )

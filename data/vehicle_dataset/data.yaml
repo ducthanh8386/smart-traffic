@@ -1,0 +1,14 @@
+path: data/vehicle_dataset
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 8
+names: ['bicycle', 'bus', 'car', 'container_truck', 'fire_engine', 'motorcycle', 'truck', 'van']
+
+roboflow:
+  workspace: luong-duc
+  project: vehicle_detection_project-8jikm
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/luong-duc/vehicle_detection_project-8jikm/dataset/1
